@@ -5,8 +5,12 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Home::index');
 
+// Public routes
+$routes->get('/', 'Home::index');
+$routes->post('login', 'Api\UsersController::login');
+
+// JWT protected routes
 $routes->group('users', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt'], static function($routes) {
     $routes->post('create', 'UsersController::create');
     $routes->get('/', 'UsersController::getAll');

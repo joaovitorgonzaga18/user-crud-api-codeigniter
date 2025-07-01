@@ -143,5 +143,25 @@ class UsersController extends ResourceController {
         }
 
     }
+
+    public function login() {
+        
+        $post = $this->request->getJSON();
+
+        $user = $this->userModel->where('email', $post->email)->first();
+
+        if (!$user || !password_verify($post->password, $user->password)) {
+            return $this->failUnauthorized('Invalid Credentials.');
+        }
+
+        $token = generateJWT($user);
+
+        return $this->respond([
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'expires_in' => getenv('JWT_EXPIRATION_TIME')
+        ]);
+
+    }
     
 }
