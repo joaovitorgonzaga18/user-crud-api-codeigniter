@@ -2,3 +2,4 @@
 .env
 /php/src/application/cache
 /php/src/application/cache/sessions
+/php/src/writable
