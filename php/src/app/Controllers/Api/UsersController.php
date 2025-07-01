@@ -11,12 +11,35 @@ class UsersController extends ResourceController {
     protected $request;
     protected $helpers = [];
 
-    protected $select_fields = ['id', 'name', 'email', 'access_level'];
+    protected $select_fields = ['id', 'name', 'email', 'access_level', 'created_at', 'updated_at'];
     
     protected $userModel;
 
     public function __construct() {
+
         $this->userModel = new UserModel();
+    }
+
+    public function index() {
+
+        $users = $this->userModel->select($this->select_fields)->findAll();
+
+        $data = [];
+
+        foreach($users as $user) {
+            $data['users'][] = [
+                "id" => $user->id,
+                "name" => $user->name,
+                "email" => $user->email,
+                "access_level" => ($user->access_level == 1) ? 'Admin' : 'User',
+                "created_at" => date('d/m/Y h:i:s', strtotime($user->created_at)),
+                "updated_at" => date('d/m/Y h:i:s', strtotime($user->updated_at)),
+            ];
+        }
+
+        // var_dump($data);exit;
+
+        return view('main_view', $data);
     }
 
     public function create() {
@@ -68,7 +91,7 @@ class UsersController extends ResourceController {
             }
 
         } else {
-            return $this->respond(['status' => false, 'message' => 'Invalid User ID'], 400);
+            return $this->respond(['status' => 400, 'message' => 'Invalid User ID'], 400);
         }
 
     }
@@ -109,7 +132,7 @@ class UsersController extends ResourceController {
             }
 
         } else {
-            return $this->respond(['status' => false, 'message' => 'Invalid User ID'], 400);
+            return $this->respond(['status' => 400, 'message' => 'Invalid User ID'], 400);
         }
 
     }
@@ -139,13 +162,13 @@ class UsersController extends ResourceController {
                 }
 
         } else {
-            return $this->respond(['status' => false, 'message' => 'Invalid User ID'], 400);
+            return $this->respond(['status' => 400, 'message' => 'Invalid User ID'], 400);
         }
 
     }
 
     public function login() {
-        
+
         $post = $this->request->getJSON();
 
         $user = $this->userModel->where('email', $post->email)->first();
@@ -154,14 +177,43 @@ class UsersController extends ResourceController {
             return $this->failUnauthorized('Invalid Credentials.');
         }
 
+        if ($user->access_level == 2) { // If Access level is user level
+            return $this->failUnauthorized('Access level not allowed.');
+        }
+
         $token = generateJWT($user);
 
         return $this->respond([
+            'message' => 'Logged in',
             'access_token' => $token,
             'token_type' => 'Bearer',
             'expires_in' => getenv('JWT_EXPIRATION_TIME')
         ]);
 
+    }
+
+    public function logout() {
+
+        $authHeader = $this->request->getHeaderLine('Authorization');
+        if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
+            return $this->fail('JWT Token not provided', 401);
+        }
+
+        $token = explode(' ', $authHeader)[1];
+        $payload = validateJWT($token);
+
+        if (!$payload) {
+            return $this->fail('Invalid JWT Token', 401);
+        }
+
+        // Salva na blacklist (use seu próprio model)
+        $db = \Config\Database::connect();
+        $db->table('token_blacklist')->insert([
+            'token' => $token,
+            'expires_at' => date('Y-m-d H:i:s', $payload->exp)
+        ]);
+
+        return $this->respond(['message' => 'Logged out.']);
     }
     
 }

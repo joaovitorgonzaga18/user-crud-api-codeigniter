@@ -9,6 +9,8 @@ use CodeIgniter\Router\RouteCollection;
 // Public routes
 $routes->get('/', 'Home::index');
 $routes->post('login', 'Api\UsersController::login');
+$routes->get('logout', 'Api\UsersController::logout');
+$routes->get('/main', 'Api\UsersController::index');
 
 // JWT protected routes
 $routes->group('users', ['namespace' => 'App\Controllers\Api', 'filter' => 'jwt'], static function($routes) {

@@ -14,7 +14,7 @@ class JwtAuth implements FilterInterface {
 
         if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
             return service('response')
-                ->setJSON(['error' => 'JWT Token not provided.'])
+                ->setJSON(['status' => 401, 'messages' => ['error' => 'JWT Token not provided.']])
                 ->setStatusCode(401);
         }
 
@@ -23,7 +23,19 @@ class JwtAuth implements FilterInterface {
 
         if (!$decoded) {
             return service('response')
-                ->setJSON(['error' => 'Invalid or expired JWT Token.'])
+                ->setJSON(['status' => 401, 'messages' => ['error' => 'Invalid or Expired JWT Token.']])
+                ->setStatusCode(401);
+        }
+
+        $db = \Config\Database::connect();
+        $blacklisted = $db->table('token_blacklist')
+            ->where('token', $token)
+            ->where('expires_at >=', date('Y-m-d H:i:s'))
+            ->countAllResults();
+
+        if ($blacklisted > 0) {
+            return service('response')
+                ->setJSON(['error' => 'JWT Token refused.'])
                 ->setStatusCode(401);
         }
 
